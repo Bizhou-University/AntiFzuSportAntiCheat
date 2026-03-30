@@ -1,0 +1,86 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags --force
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          VERSION_NAME=${LATEST_TAG#v}
+          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG, versionName: $VERSION_NAME"
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease -PversionName=${{ steps.get_tag.outputs.version_name }}
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.0"
+
+      - name: Rename APK
+        run: |
+          VERSION="${{ steps.get_tag.outputs.version_name }}"
+          OLD_PATH="${{ steps.sign_app.outputs.signedReleaseFile }}"
+          DIR=$(dirname "$OLD_PATH")
+          NEW_NAME="AntiFzuSportAntiCheat_${VERSION}.apk"
+          NEW_PATH="$DIR/$NEW_NAME"
+          mv "$OLD_PATH" "$NEW_PATH"
+          echo "FINAL_APK_PATH=$NEW_PATH" >> $GITHUB_ENV
+          echo "FINAL_APK_NAME=$NEW_NAME" >> $GITHUB_ENV
+
+      - name: Upload Signed APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FINAL_APK_NAME }}
+          path: ${{ env.FINAL_APK_PATH }}
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.FINAL_APK_PATH }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">福大体育反反作弊</string>
+    <string name="app_description">草饲福大体育健康跑虚拟定位反作弊</string>
+
+    <string name="tab_status">状态</string>
+    <string name="tab_settings">配置</string>
+
+    <string name="module_page_title">模块激活页面</string>
+    <string name="module_active">已激活</string>
+    <string name="module_inactive">未激活</string>
+    <string name="module_quote">你有无数次试探的可能，但是你只有一次后悔的机会！</string>
+
+    <string name="app_title">福大体育反反作弊</string>
+    <string name="module_status_label">模块状态</string>
+    <string name="module_active_desc">正在运行</string>
+    <string name="module_inactive_desc">请在LSPosed中启用本模块</string>
+    <string name="main_quote">你有无数次试探的可能，但是你只有一次后悔的机会！</string>
+</resources>
